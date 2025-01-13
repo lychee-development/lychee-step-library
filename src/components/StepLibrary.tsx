@@ -23,7 +23,9 @@ const StepLibrary = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [activeTab, setActiveTab] = useState("library");
+  const [steps, setSteps] = useState<any[]>([]);
 
+  // Check if we are on the client side and restore dark mode preference
   useEffect(() => {
     setIsClient(true);
 
@@ -33,31 +35,37 @@ const StepLibrary = () => {
     }
   }, []);
 
-  const [steps, setSteps] = useState<any[]>([]);
-
+  // Fetch steps from API
   useEffect(() => {
-    setSteps([
-      {
-        step_id: "123-123-123-123",
-        step_name: "Data Preprocessing",
-        step_inputs: ".csv file",
-        step_outputs: ".csv file",
-        step_code: "some \n code \n blah blah blah blah",
-        step_framework: "Prefect",
-        step_downloads: 1234,
-        step_creator: "abhiram",
-      },
-      {
-        step_id: "567-567-567-567",
-        step_name: "Feature Extraction",
-        step_inputs: "array",
-        step_outputs: "array",
-        step_code: "some \n code \n blah blah blah blah",
-        step_framework: "Prefect",
-        step_downloads: 1234,
-        step_creator: "venkat",
-      },
-    ]);
+    async function fetchSteps() {
+      try {
+        const response = await fetch(
+          "https://plankton-app-cw8aq.ondigitalocean.app/steps"
+        );
+        if (!response.ok) {
+          throw new Error(`Network response was not ok: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // 'data' should be an array of objects, each containing:
+        // {
+        //   "id": string,
+        //   "created_at": string,
+        //   "step_creator": string | null,
+        //   "step_name": string,
+        //   "step_inputs": string,
+        //   "step_outputs": string,
+        //   "step_code": string,
+        //   "step_framework": string,
+        //   "step_downloads": number
+        // }
+        setSteps(data);
+      } catch (error) {
+        console.error("Error fetching steps:", error);
+      }
+    }
+
+    fetchSteps();
   }, []);
 
   const handleUseElement = (stepId: string) => {
@@ -66,14 +74,25 @@ const StepLibrary = () => {
     alert("Command copied, paste in CLI");
   };
 
-  const filteredSteps = steps.filter(
-    (step) =>
-      step.step_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      step.step_framework.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      step.step_inputs.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      step.step_outputs.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  // Filter the steps based on the search term
+  const filteredSteps = steps.filter((step) => {
+    const nameMatch = step.step_name
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const frameworkMatch = step.step_framework
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const inputsMatch = step.step_inputs
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const outputsMatch = step.step_outputs
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase());
 
+    return nameMatch || frameworkMatch || inputsMatch || outputsMatch;
+  });
+
+  // Conditionally render content based on the current active tab
   const renderContent = () => {
     switch (activeTab) {
       case "library":
@@ -81,7 +100,7 @@ const StepLibrary = () => {
           <div className="w-full space-y-4">
             {filteredSteps.map((step) => (
               <div
-                key={step.step_id}
+                key={step.id}
                 className={`w-full rounded-lg transition-colors ${
                   isDarkMode
                     ? "bg-[#2a2a2a] hover:bg-[#333333]"
@@ -91,9 +110,7 @@ const StepLibrary = () => {
                 <div
                   className="w-full p-4 cursor-pointer"
                   onClick={() =>
-                    setExpandedStep(
-                      expandedStep === step.step_id ? null : step.step_id,
-                    )
+                    setExpandedStep(expandedStep === step.id ? null : step.id)
                   }
                 >
                   <div className="flex flex-wrap items-center gap-4 w-full">
@@ -135,21 +152,22 @@ const StepLibrary = () => {
                       <div className="flex items-center gap-2 text-xs">
                         <User className="h-3 w-3" />
                         <span className="font-mono">
-                          {expandedStep === step.step_id
-                            ? step.step_creator
-                            : `${step.step_creator.slice(0, 8)}...`}
+                          {/* Handle null creator by providing a fallback */}
+                          {expandedStep === step.id
+                            ? step.step_creator || "Unknown"
+                            : `${(step.step_creator || "Unknown").slice(0, 8)}...`}
                         </span>
                       </div>
                       <ChevronRight
                         className={`h-4 w-4 transition-transform ${
-                          expandedStep === step.step_id ? "rotate-90" : ""
+                          expandedStep === step.id ? "rotate-90" : ""
                         }`}
                       />
                     </div>
                   </div>
                 </div>
 
-                {expandedStep === step.step_id && (
+                {expandedStep === step.id && (
                   <div
                     className={`w-full px-4 pb-4 mt-2 pt-4 border-t ${
                       isDarkMode ? "border-[#3a3a3a]" : "border-gray-200"
@@ -213,7 +231,7 @@ const StepLibrary = () => {
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleUseElement(step.step_id);
+                            handleUseElement(step.id);
                           }}
                         >
                           <Terminal className="h-4 w-4" />
@@ -324,3 +342,4 @@ const StepLibrary = () => {
 };
 
 export default StepLibrary;
+
