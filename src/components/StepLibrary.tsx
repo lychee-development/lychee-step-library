@@ -40,7 +40,7 @@ const StepLibrary = () => {
     async function fetchSteps() {
       try {
         const response = await fetch(
-          "https://plankton-app-cw8aq.ondigitalocean.app/steps"
+          "https://iko-s6u4s.ondigitalocean.app/steps",
         );
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status}`);
@@ -342,4 +342,3 @@ const StepLibrary = () => {
 };
 
 export default StepLibrary;
-
